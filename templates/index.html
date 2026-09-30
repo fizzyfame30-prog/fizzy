@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ app_name }}</title>
+    <style>
+      :root {
+        --bg: #08111f;
+        --panel: #111b2d;
+        --panel-2: #16253c;
+        --text: #edf6ff;
+        --muted: #a7c0d9;
+        --accent: #4cc9f0;
+        --accent-2: #7ef9d9;
+        --danger: #ff6b6b;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, var(--bg), #0d1b2a 60%, #101827);
+        color: var(--text);
+      }
+
+      .app {
+        width: min(900px, 92vw);
+        background: rgba(17, 27, 45, 0.96);
+        border: 1px solid rgba(124, 157, 190, 0.3);
+        border-radius: 18px;
+        padding: 26px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      .tagline {
+        color: var(--accent-2);
+        margin-bottom: 18px;
+      }
+
+      .meta {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .panel {
+        background: var(--panel-2);
+        border-radius: 14px;
+        padding: 18px;
+        margin-top: 18px;
+      }
+
+      textarea, select, button {
+        width: 100%;
+        border: 1px solid rgba(155, 177, 202, 0.4);
+        background: #0b1a2d;
+        color: var(--text);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 1rem;
+      }
+
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+        margin-top: 10px;
+      }
+
+      select {
+        margin-top: 10px;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      button {
+        cursor: pointer;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        opacity: 0.96;
+      }
+
+      .primary {
+        background: linear-gradient(180deg, var(--accent), #2f7ae5);
+        border-color: transparent;
+      }
+
+      .secondary {
+        background: #1e3149;
+      }
+
+      .response {
+        margin-top: 20px;
+        padding: 16px;
+        background: #091827;
+        border: 1px solid rgba(133, 170, 206, 0.3);
+        border-radius: 12px;
+        min-height: 90px;
+        line-height: 1.7;
+        color: var(--text);
+      }
+
+      .microphone-status {
+        margin-top: 10px;
+        color: var(--accent-2);
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <h1>{{ app_name }}</h1>
+      <div class="tagline">{{ tagline }}</div>
+
+      <div class="meta">
+        <div>Owner: {{ owner_name }}</div>
+        <div>Email: <a href="mailto:{{ public_email }}">{{ public_email }}</a></div>
+        <div>Contact: <a href="{{ contact_url }}" target="_blank" rel="noreferrer">{{ contact_url }}</a></div>
+      </div>
+
+      <div class="panel">
+        <label for="language">Language</label>
+        <select id="language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="ar">العربية</option>
+        </select>
+
+        <textarea id="messageInput" placeholder="Ask Fizzy about trading, market trends, risk, or strategy"></textarea>
+
+        <div class="button-row">
+          <button class="primary" id="askBtn">Ask Fizzy</button>
+          <button class="secondary" id="micBtn">Use Microphone</button>
+          <button class="secondary" id="speakBtn">Speak Response</button>
+        </div>
+
+        <div class="microphone-status" id="microphoneStatus">Microphone idle</div>
+      </div>
+
+      <div class="response" id="responseBox">
+        Hi! I am Fizzy. I can help you analyze the market and answer trading questions.
+      </div>
+    </div>
+
+    <script>
+      const responseBox = document.getElementById('responseBox');
+      const messageInput = document.getElementById('messageInput');
+      const languageSelect = document.getElementById('language');
+      const micStatus = document.getElementById('microphoneStatus');
+
+      async function askFizzy() {
+        const message = messageInput.value.trim();
+        if (!message) {
+          responseBox.textContent = 'Please say or type a question first.';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('message', message);
+        formData.append('language', languageSelect.value);
+
+        const response = await fetch('/chat', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+        responseBox.textContent = data.answer || 'I could not generate a response.';
+      }
+
+      document.getElementById('askBtn').addEventListener('click', askFizzy);
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = languageSelect.value;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          messageInput.value = transcript;
+          micStatus.textContent = 'Voice captured';
+          askFizzy();
+        };
+
+        recognition.onerror = () => {
+          micStatus.textContent = 'Microphone error';
+        };
+
+        recognition.onend = () => {
+          micStatus.textContent = 'Microphone idle';
+        };
+      }
+
+      document.getElementById('micBtn').addEventListener('click', () => {
+        if (!recognition) {
+          responseBox.textContent = 'Voice recognition is not supported in this browser. Try Chrome or Edge.';
+          return;
+        }
+
+        recognition.lang = languageSelect.value;
+        micStatus.textContent = 'Listening...';
+        recognition.start();
+      });
+
+      document.getElementById('speakBtn').addEventListener('click', () => {
+        const utterance = new SpeechSynthesisUtterance(responseBox.textContent);
+        utterance.lang = languageSelect.value;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      });
+
+      languageSelect.addEventListener('change', () => {
+        if (recognition) {
+          recognition.lang = languageSelect.value;
+        }
+      });
+    </script>
+  </body>
+</html>
