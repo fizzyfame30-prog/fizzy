@@ -1,21 +1,24 @@
 # Fizzy
 
-Fizzy is a public AI trading assistant that can listen and speak. It includes:
-- voice input using the browser microphone
-- speech output using browser text-to-speech
-- a chat interface for trading questions
-- a simple market-analysis response engine
-- optional OpenAI integration for richer answers
+Fizzy is a public AI trading assistant with voice input and speech output.
 
-This starter project is designed for a public repo. Keep private keys and personal details in a local .env file and never commit them.
+Core features:
+- browser voice recognition
+- browser text-to-speech
+- trading dashboard with watchlist
+- technical signal summaries
+- paper-trading simulation
+- public, safe profile and contact configuration
+- optional OpenAI integration
 
-## Features
-- Name: Fizzy
-- Voice recognition and speaking
-- Trading assistant style prompts
-- Market summary, trend, risk, and strategy guidance
-- Public-safe profile and contact details
-- Simple FastAPI backend and browser frontend
+## Features included
+- Market overview / watchlist cards
+- Price, trend, and momentum scoring
+- RSI and moving average signals
+- Paper-trading portfolio simulation
+- Quick trade journal and cash tracking
+- Voice-driven chat
+- Multi-language support
 
 ## Quick start
 
@@ -26,32 +29,16 @@ This starter project is designed for a public repo. Keep private keys and person
 2. Install dependencies
    pip install -r requirements.txt
 
-3. Copy environment example
+3. Copy environment file
    cp .env.example .env
 
 4. Run the app
    uvicorn app:app --reload
 
-5. Open the app in a browser
+5. Open in your browser
    http://127.0.0.1:8000
 
-## Environment variables
-
-Example values are in `.env.example`.
-
-- APP_NAME
-- APP_TAGLINE
-- OWNER_NAME
-- PUBLIC_EMAIL
-- CONTACT_URL
-- OPENAI_API_KEY
-- DEFAULT_LANGUAGE
-
-## Important
-- Do not store private Gmail, phone numbers, exchange keys, or brokerage credentials in public source control.
-- Use a public email or contact form instead.
-- This app is for learning and simulation. It is not financial advice.
-
 ## Notes
-- If `OPENAI_API_KEY` is not set, Fizzy uses a local trading assistant fallback.
-- Voice input uses the browser's speech recognition API, which works best in modern Chromium-based browsers.
+- This app uses `yfinance` to pull market data. Internet access is required.
+- For public repos, do not commit personal Gmail, phone numbers, exchange keys, or brokerage credentials.
+- This project is educational and simulation-focused, not financial advice.

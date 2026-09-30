@@ -14,6 +14,7 @@
         --accent: #4cc9f0;
         --accent-2: #7ef9d9;
         --danger: #ff6b6b;
+        --success: #69d16e;
       }
 
       * { box-sizing: border-box; }
@@ -21,31 +22,33 @@
       body {
         margin: 0;
         min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: Arial, sans-serif;
         background: linear-gradient(135deg, var(--bg), #0d1b2a 60%, #101827);
         color: var(--text);
+        font-family: Arial, sans-serif;
       }
 
-      .app {
-        width: min(900px, 92vw);
-        background: rgba(17, 27, 45, 0.96);
-        border: 1px solid rgba(124, 157, 190, 0.3);
-        border-radius: 18px;
-        padding: 26px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      .container {
+        width: min(1200px, 96vw);
+        margin: 30px auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 18px;
       }
 
       h1 {
-        margin: 0 0 8px;
+        margin: 0;
         font-size: clamp(2rem, 4vw, 3rem);
       }
 
       .tagline {
         color: var(--accent-2);
-        margin-bottom: 18px;
+        margin-top: 4px;
       }
 
       .meta {
@@ -58,38 +61,58 @@
         text-decoration: none;
       }
 
-      .panel {
-        background: var(--panel-2);
-        border-radius: 14px;
-        padding: 18px;
-        margin-top: 18px;
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
       }
 
-      textarea, select, button {
+      .card {
+        background: rgba(17, 27, 45, 0.96);
+        border: 1px solidrgba(124, 157, 190, 0.3);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 14px 30px rgba(0,0,0,0.18);
+      }
+
+      .card h3 {
+        margin: 0 0 12px;
+        font-size: 1.1rem;
+      }
+
+      .metric {
+        font-size: 1.8rem;
+        font-weight: bold;
+      }
+
+      .positive { color: var(--success); }
+      .negative { color: var(--danger); }
+      .neutral { color: var(--accent); }
+
+      .panel {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 20px;
+      }
+
+      .chatbox, .tradebox {
+        background: rgba(17, 27, 45, 0.94);
+        border: 1px solid rgba(124, 157, 190, 0.3);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      textarea, select, button, input {
         width: 100%;
+        margin-top: 10px;
+        padding: 12px 14px;
+        border-radius: 10px;
         border: 1px solid rgba(155, 177, 202, 0.4);
         background: #0b1a2d;
         color: var(--text);
-        border-radius: 10px;
-        padding: 12px 14px;
         font-size: 1rem;
-      }
-
-      textarea {
-        min-height: 120px;
-        resize: vertical;
-        margin-top: 10px;
-      }
-
-      select {
-        margin-top: 10px;
-      }
-
-      .button-row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-top: 12px;
       }
 
       button {
@@ -102,74 +125,170 @@
         opacity: 0.96;
       }
 
-      .primary {
-        background: linear-gradient(180deg, var(--accent), #2f7ae5);
-        border-color: transparent;
-      }
-
-      .secondary {
-        background: #1e3149;
-      }
+      .primary { background: linear-gradient(180deg, var(--accent), #2f7ae5); border-color: transparent; }
+      .secondary { background: #1e3149; }
 
       .response {
-        margin-top: 20px;
-        padding: 16px;
+        margin-top: 16px;
+        min-height: 120px;
         background: #091827;
         border: 1px solid rgba(133, 170, 206, 0.3);
         border-radius: 12px;
-        min-height: 90px;
-        line-height: 1.7;
-        color: var(--text);
+        padding: 16px;
+        line-height: 1.6;
       }
 
-      .microphone-status {
-        margin-top: 10px;
+      .trade-list {
+        list-style: none;
+        padding: 0;
+        margin: 18px 0 0;
+      }
+
+      .trade-list li {
+        background: #0c1d31;
+        border: 1px solid rgba(188, 206, 224, 0.2);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+      }
+
+      .status {
         color: var(--accent-2);
         font-weight: bold;
+        margin-top: 12px;
+      }
+
+      @media (max-width: 900px) {
+        .panel { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
-    <div class="app">
-      <h1>{{ app_name }}</h1>
-      <div class="tagline">{{ tagline }}</div>
-
-      <div class="meta">
-        <div>Owner: {{ owner_name }}</div>
-        <div>Email: <a href="mailto:{{ public_email }}">{{ public_email }}</a></div>
-        <div>Contact: <a href="{{ contact_url }}" target="_blank" rel="noreferrer">{{ contact_url }}</a></div>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h1>{{ app_name }}</h1>
+          <div class="tagline">{{ tagline }}</div>
+        </div>
+        <div class="meta">
+          <div>Owner: {{ owner_name }}</div>
+          <div>Email: <a href="mailto:{{ public_email }}">{{ public_email }}</a></div>
+          <div>Contact: <a href="{{ contact_url }}" target="_blank" rel="noreferrer">{{ contact_url }}</a></div>
+        </div>
       </div>
+
+      <div class="grid" id="marketGrid"></div>
 
       <div class="panel">
-        <label for="language">Language</label>
-        <select id="language">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="fr">Français</option>
-          <option value="ar">العربية</option>
-        </select>
+        <div class="chatbox">
+          <h3>Voice Trading Assistant</h3>
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="ar">العربية</option>
+          </select>
 
-        <textarea id="messageInput" placeholder="Ask Fizzy about trading, market trends, risk, or strategy"></textarea>
+          <textarea id="messageInput" placeholder="Ask about trading, risk, trend, or strategy"></textarea>
 
-        <div class="button-row">
-          <button class="primary" id="askBtn">Ask Fizzy</button>
-          <button class="secondary" id="micBtn">Use Microphone</button>
-          <button class="secondary" id="speakBtn">Speak Response</button>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="primary" id="askBtn">Ask Fizzy</button>
+            <button class="secondary" id="micBtn">Use Microphone</button>
+            <button class="secondary" id="speakBtn">Speak Reply</button>
+          </div>
+
+          <div class="status" id="microphoneStatus">Microphone idle</div>
+          <div id="responseBox" class="response">Hi! I am Fizzy. I can help you analyze the market and answer trading questions.</div>
         </div>
 
-        <div class="microphone-status" id="microphoneStatus">Microphone idle</div>
-      </div>
+        <div class="tradebox">
+          <h3>Paper Trading</h3>
+          <div>Cash: <strong id="cashValue">$0</strong></div>
+          <div>Open positions: <strong id="positionsValue">0</strong></div>
 
-      <div class="response" id="responseBox">
-        Hi! I am Fizzy. I can help you analyze the market and answer trading questions.
+          <label for="tradeSymbol">Symbol</label>
+          <input id="tradeSymbol" value="AAPL" />
+
+          <label for="tradeSide">Side</label>
+          <select id="tradeSide">
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+
+          <label for="tradeQty">Quantity</label>
+          <input id="tradeQty" type="number" min="1" value="1" />
+
+          <button class="primary" id="tradeBtn" style="margin-top:12px;">Execute Trade</button>
+
+          <ul id="tradeList" class="trade-list"></ul>
+        </div>
       </div>
     </div>
 
     <script>
+      const marketGrid = document.getElementById('marketGrid');
       const responseBox = document.getElementById('responseBox');
       const messageInput = document.getElementById('messageInput');
       const languageSelect = document.getElementById('language');
       const micStatus = document.getElementById('microphoneStatus');
+      const cashValue = document.getElementById('cashValue');
+      const positionsValue = document.getElementById('positionsValue');
+      const tradeList = document.getElementById('tradeList');
+
+      function formatMoney(value) {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value || 0);
+      }
+
+      function signalClass(score) {
+        if (score >= 60) return 'positive';
+        if (score <= 40) return 'negative';
+        return 'neutral';
+      }
+
+      async function loadMarket() {
+        const response = await fetch('/api/market');
+        const result = await response.json();
+        const items = result.items || [];
+
+        marketGrid.innerHTML = '';
+
+        items.forEach((item) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          const action = item.action || 'neutral';
+          const score = item.score || 50;
+          const deltaClass = Number(item.change_pct || 0) >= 0 ? 'positive' : 'negative';
+
+          card.innerHTML = `
+            <h3>${item.symbol}</h3>
+            <div class="meta">${item.name || item.symbol}</div>
+            <div class="metric">${formatMoney(item.last || 0)}</div>
+            <div class="${deltaClass}">${(Number(item.change_pct || 0)).toFixed(2)}%</div>
+            <div>RSI: ${Number(item.rsi || 0).toFixed(1)}</div>
+            <div>SMA 20: ${formatMoney(item.sma20 || 0)}</div>
+            <div>Signal: <span class="${signalClass(score)}">${action.toUpperCase()} (${score})</span></div>
+          `;
+          marketGrid.appendChild(card);
+        });
+      }
+
+      async function loadPortfolio() {
+        const response = await fetch('/api/portfolio');
+        const data = await response.json();
+        const positions = Object.keys(data.positions || {}).length;
+        cashValue.textContent = formatMoney(data.cash || 0);
+        positionsValue.textContent = positions;
+
+        tradeList.innerHTML = '';
+        const history = (data.history || []).slice(-5).reverse();
+
+        history.forEach((trade) => {
+          const li = document.createElement('li');
+          li.textContent = `${trade.side.toUpperCase()} ${trade.symbol} ${trade.quantity} @ ${formatMoney(trade.price)}`;
+          tradeList.appendChild(li);
+        });
+      }
 
       async function askFizzy() {
         const message = messageInput.value.trim();
@@ -182,16 +301,40 @@
         formData.append('message', message);
         formData.append('language', languageSelect.value);
 
-        const response = await fetch('/chat', {
-          method: 'POST',
-          body: formData
-        });
-
+        const response = await fetch('/chat', { method: 'POST', body: formData });
         const data = await response.json();
         responseBox.textContent = data.answer || 'I could not generate a response.';
       }
 
+      async function executeTrade() {
+        const symbol = document.getElementById('tradeSymbol').value.trim();
+        const side = document.getElementById('tradeSide').value;
+        const quantity = Number(document.getElementById('tradeQty').value || 0);
+
+        if (!symbol || !quantity) {
+          responseBox.textContent = 'Please enter a valid symbol and quantity.';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('symbol', symbol);
+        formData.append('side', side);
+        formData.append('quantity', quantity);
+
+        const response = await fetch('/api/trade', { method: 'POST', body: formData });
+        const data = await response.json();
+
+        if (data.status === 'ok') {
+          responseBox.textContent = `${side.toUpperCase()} order for ${symbol} executed in paper trading mode.`;
+          await loadPortfolio();
+          await loadMarket();
+        } else {
+          responseBox.textContent = data.message || 'Trade failed.';
+        }
+      }
+
       document.getElementById('askBtn').addEventListener('click', askFizzy);
+      document.getElementById('tradeBtn').addEventListener('click', executeTrade);
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       let recognition = null;
@@ -237,10 +380,15 @@
       });
 
       languageSelect.addEventListener('change', () => {
-        if (recognition) {
-          recognition.lang = languageSelect.value;
-        }
+        if (recognition) recognition.lang = languageSelect.value;
       });
+
+      loadMarket();
+      loadPortfolio();
+      setInterval(() => {
+        loadMarket();
+        loadPortfolio();
+      }, 30000);
     </script>
   </body>
 </html>

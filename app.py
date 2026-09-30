@@ -1,10 +1,13 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from openai import OpenAI
+import numpy as np
+import pandas as pd
+import yfinance as yf
 
 load_dotenv()
 
@@ -21,11 +24,14 @@ DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "en")
 api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key) if api_key else None
 
+WATCHLIST = ["AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "BTC-USD", "ETH-USD"]
+PORTFOLIO = {"cash": 10000.0, "positions": {}, "history": []}
+
 TRANSLATIONS = {
     "en": {
         "greeting": f"Hi! I am {APP_NAME}. I can help you analyze the market and answer trading questions.",
         "default": "I can help with market overview, risk checks, watchlist questions, and trade planning.",
-        "contact": f"Public contact: {PUBLIC_EMAIL}. For a formal contact, use {CONTACT_URL}.",
+        "contact": f"Public contact: {PUBLIC_EMAIL}. For formal contact, use {CONTACT_URL}.",
         "not_financial_advice": "This is educational analysis and not financial advice. Always manage risk carefully.",
         "focus": "Focus on trend, risk, confirmation, and position sizing before entering a trade.",
     },
@@ -57,6 +63,98 @@ def get_language(lang: str) -> str:
     return lang if lang in TRANSLATIONS else DEFAULT_LANGUAGE
 
 
+def rsi(series: pd.Series, period: int = 14) -> float:
+    delta = series.diff().dropna()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    rsi_val = 100 - (100 / (1 + rs))
+    return float(rsi_val.iloc[-1]) if not rsi_val.empty else 50.0
+
+
+def compute_signal(df: pd.DataFrame) -> Dict[str, Any]:
+    if df.empty:
+        return {"signal": "No data", "score": 0, "action": "wait"}
+
+    close = df["Close"].astype(float)
+    last = float(close.iloc[-1])
+    prev = float(close.iloc[-2]) if len(close) > 1 else last
+    change_pct = ((last - prev) / prev) * 100 if prev else 0.0
+    sma5 = float(close.tail(5).mean())
+    sma20 = float(close.tail(20).mean())
+    sma50 = float(close.tail(50).mean())
+    rsi_value = rsi(close)
+
+    score = 50
+    if last > sma20:
+        score += 15
+    else:
+        score -= 10
+    if last > sma50:
+        score += 10
+    else:
+        score -= 10
+    if rsi_value > 60:
+        score += 10
+    elif rsi_value < 40:
+        score -= 10
+    if change_pct > 0:
+        score += 8
+    else:
+        score -= 8
+
+    if score >= 60:
+        action = "bullish"
+    elif score <= 40:
+        action = "bearish"
+    else:
+        action = "neutral"
+
+    return {
+        "last": last,
+        "change_pct": change_pct,
+        "sma5": sma5,
+        "sma20": sma20,
+        "sma50": sma50,
+        "rsi": rsi_value,
+        "score": int(max(0, min(100, score))),
+        "action": action,
+    }
+
+
+def get_market_data(symbol: str) -> Dict[str, Any]:
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="3mo", interval="1d")
+        if hist.empty:
+            return {"symbol": symbol, "error": "No data"}
+        signal = compute_signal(hist)
+        return {
+            "symbol": symbol,
+            "name": ticker.info.get("shortName", symbol),
+            "last": signal["last"],
+            "change_pct": signal["change_pct"],
+            "sma5": signal["sma5"],
+            "sma20": signal["sma20"],
+            "sma50": signal["sma50"],
+            "rsi": signal["rsi"],
+            "score": signal["score"],
+            "action": signal["action"],
+        }
+    except Exception as exc:
+        return {"symbol": symbol, "error": str(exc)}
+
+
+def get_watchlist_data() -> List[Dict[str, Any]]:
+    items = []
+    for symbol in WATCHLIST:
+        data = get_market_data(symbol)
+        items.append(data)
+    return items
+
+
 def build_local_trade_response(message: str, language: str) -> str:
     text = message.lower()
     lang = get_language(language)
@@ -73,10 +171,10 @@ def build_local_trade_response(message: str, language: str) -> str:
 
     if "trend" in text or "bullish" in text or "bearish" in text or "market" in text:
         if "btc" in text or "bitcoin" in text:
-            return "Bitcoin trend analysis: check broader momentum, support zones, and volume. A strong breakout with confirmation can be bullish, but risk must stay controlled."
+            return "Bitcoin trend analysis: check wider momentum, support zones, and volume. A strong breakout with confirmation can be bullish, but risk must stay controlled."
         if "eth" in text or "ethereum" in text:
             return "Ethereum trend analysis: validate higher lows, relative strength, and volume before assuming bullish continuation."
-        if "nvda" in text or "aapl" in text or "tsla" in text or "msft" in text:
+        if any(sym in text for sym in ["nvda", "aapl", "tsla", "msft", "amzn"]):
             return "For equities, confirm trend, volume, and key levels. Favor structured entries and enforce risk limits on every trade."
         return "Trend analysis should combine price action, volume, key levels, and confirmation. Do not rely on a single signal alone."
 
@@ -105,7 +203,7 @@ def ai_trade_response(message: str, language: str) -> str:
                     "content": (
                         f"You are {APP_NAME}, a voice-enabled AI trading assistant. "
                         f"You help with market analysis, trade setup ideas, and risk management. "
-                        f"Use public, non-private information only. "
+                        f"Use public information only. "
                         f"Never claim certainty or promise profit. "
                         f"Always mention that this is educational and not financial advice."
                     ),
@@ -132,6 +230,66 @@ async def home(request: Request):
             "contact_url": CONTACT_URL,
         },
     )
+
+
+@app.get("/api/market")
+async def api_market():
+    return {"items": get_watchlist_data()}
+
+
+@app.get("/api/signal")
+async def api_signal(symbol: str = "AAPL"):
+    return get_market_data(symbol)
+
+
+@app.get("/api/portfolio")
+async def api_portfolio():
+    return PORTFOLIO
+
+
+@app.post("/api/trade")
+async def api_trade(symbol: str = Form(...), side: str = Form(...), quantity: float = Form(...)):
+    symbol = symbol.upper()
+    side = side.lower()
+    qty = float(quantity)
+    if qty <= 0:
+        return {"status": "error", "message": "Quantity must be greater than zero."}
+
+    market = get_market_data(symbol)
+    if "error" in market:
+        return {"status": "error", "message": f"Unable to fetch price for {symbol}"}
+
+    price = float(market["last"])
+    value = price * qty
+    if side == "buy":
+        if PORTFOLIO["cash"] < value:
+            return {"status": "error", "message": "Insufficient cash for this buy order."}
+        PORTFOLIO["cash"] -= value
+        PORTFOLIO["positions"].setdefault(symbol, {"qty": 0.0, "avg": 0.0})
+        pos = PORTFOLIO["positions"][symbol]
+        total_qty = pos["qty"] + qty
+        pos["avg"] = ((pos["avg"] * pos["qty"]) + (price * qty)) / total_qty if total_qty else 0
+        pos["qty"] = total_qty
+    elif side == "sell":
+        pos = PORTFOLIO["positions"].get(symbol)
+        if not pos or pos["qty"] < qty:
+            return {"status": "error", "message": "Not enough shares to sell."}
+        PORTFOLIO["cash"] += value
+        pos["qty"] -= qty
+        if pos["qty"] == 0:
+            PORTFOLIO["positions"].pop(symbol, None)
+    else:
+        return {"status": "error", "message": "Side must be buy or sell."}
+
+    PORTFOLIO["history"].append({
+        "symbol": symbol,
+        "side": side,
+        "quantity": qty,
+        "price": price,
+        "timestamp": pd.Timestamp.utcnow().isoformat()
+    })
+
+    return {"status": "ok", "portfolio": PORTFOLIO}
 
 
 @app.post("/chat")
